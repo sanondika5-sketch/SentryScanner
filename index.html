@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentryCode // AI Vulnerability Scanner & Auditor</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <div class="pulse-ring"></div>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">SentryCode</span>
+                    <span class="brand-subtitle">Security Auditor</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-view="dashboard">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-view="all-issues">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Vulnerabilities</span>
+                    <span class="nav-badge count-high" id="sidebar-badge">4</span>
+                </a>
+                <a href="#" class="nav-item" data-view="scan-history">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Scan History</span>
+                </a>
+                <a href="#" class="nav-item" data-view="docs">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Rules Engine</span>
+                </a>
+                <a href="#" class="nav-item" data-view="settings">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-widget">
+                <div class="widget-header">
+                    <span>Target Security Score</span>
+                    <span class="widget-val" id="widget-score-val">68/100</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="widget-score-fill" style="width: 68%;"></div>
+                </div>
+                <div class="widget-status">
+                    <span class="status-dot warning"></span>
+                    <span class="status-text">Action Required</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="User Avatar" class="avatar">
+                    <div class="user-info">
+                        <span class="username">Alex Developer</span>
+                        <span class="user-role">Lead Devops</span>
+                    </div>
+                </div>
+                <button class="btn-icon" id="theme-toggle" title="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Body -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <div class="search-container">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" placeholder="Search rules, findings, or file paths..." class="search-input" id="global-search">
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="scanner-status">
+                        <span class="pulse-indicator online"></span>
+                        <span class="status-label">Scanner Core: <strong id="status-core">Online</strong></span>
+                    </div>
+                    <div class="icon-actions">
+                        <div class="action-btn-wrapper">
+                            <button class="action-btn" id="notification-btn" title="Notifications">
+                                <i class="fa-regular fa-bell"></i>
+                                <span class="action-badge"></span>
+                            </button>
+                        </div>
+                        <button class="action-btn" id="quick-reset-btn" title="Reset Demo Data">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Container -->
+            <div class="content-body">
+
+                <!-- 1. SETUP / UPLOAD VIEW -->
+                <section id="upload-view" class="view-section active">
+                    <div class="view-header">
+                        <h1 class="view-title">New Code Audit Scan</h1>
+                        <p class="view-description">Analyze local repositories or code repositories for vulnerabilities, API key leaks, and code-smells instantly.</p>
+                    </div>
+
+                    <div class="upload-grid">
+                        <!-- Left Panel: Form Inputs -->
+                        <div class="upload-panel glass-panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-folder-open"></i> Choose Scan Source</h2>
+                            <p class="panel-subtitle">Upload zip archives, drag files, or specify remote repository URLs.</p>
+
+                            <!-- Tab Buttons -->
+                            <div class="upload-tabs">
+                                <button class="tab-btn active" data-tab="local-files">
+                                    <i class="fa-solid fa-file-arrow-up"></i> Local Files
+                                </button>
+                                <button class="tab-btn" data-tab="remote-repo">
+                                    <i class="fa-brands fa-git-alt"></i> Git Repo URL
+                                </button>
+                            </div>
+
+                            <!-- Tab 1: Local Files -->
+                            <div class="tab-content active" id="local-files-tab">
+                                <div class="drop-zone" id="drop-zone-area">
+                                    <input type="file" id="file-input" class="file-input" multiple accept=".zip,.py,.js,.html,.css,.json,.go,.rs,.java,.cpp,.h">
+                                    <div class="drop-zone-content">
+                                        <div class="drop-zone-icon">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        </div>
+                                        <p class="drop-text-primary">Drag & drop your files/folders or <span>browse</span></p>
+                                        <p class="drop-text-secondary">Supports .zip archives or individual source files (.py, .js, .go, .java, etc.)</p>
+                                    </div>
+                                </div>
+                                <div class="file-list-preview" id="file-list-preview" style="display: none;">
+                                    <div class="preview-header">
+                                        <span>Selected Files</span>
+                                        <button class="btn-text" id="clear-files-btn">Clear All</button>
+                                    </div>
+                                    <ul class="file-items" id="file-items-list">
+                                        <!-- Dynamically generated -->
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Tab 2: Remote Repo -->
+                            <div class="tab-content" id="remote-repo-tab">
+                                <div class="input-group">
+                                    <label for="repo-url" class="input-label">Git Repository URL</label>
+                                    <div class="url-input-wrapper">
+                                        <span class="url-prefix"><i class="fa-solid fa-link"></i></span>
+                                        <input type="url" id="repo-url" placeholder="https://github.com/username/project-repository" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="repo-options">
+                                    <div class="checkbox-group">
+                                        <input type="checkbox" id="scan-branch-main" checked>
+                                        <label for="scan-branch-main">Scan default branch (main/master)</label>
+                                    </div>
+                                    <div class="checkbox-group">
+                                        <input type="checkbox" id="scan-pr-comments">
+                                        <label for="scan-pr-comments">Verify dependency vulnerabilities (CVEs)</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action buttons -->
+                            <div class="scan-action-wrapper">
+                                <button class="btn-primary" id="start-scan-btn" disabled>
+                                    <i class="fa-solid fa-play"></i> Start Security Scan
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Scanner Rules & Quickstart -->
+                        <div class="info-sidebar-panel">
+                            <!-- Quick Start Demo Projects -->
+                            <div class="glass-panel quickstart-card">
+                                <h3 class="card-section-title"><i class="fa-solid fa-rocket"></i> Try Auditor Demo</h3>
+                                <p class="card-section-desc">Instantly load a pre-configured insecure project to demo dashboard capabilities.</p>
+                                <div class="demo-projects-list">
+                                    <div class="demo-project-item" data-demo="ecom">
+                                        <div class="demo-info">
+                                            <span class="demo-name">vuln-flask-ecommerce.zip</span>
+                                            <span class="demo-tags">Python / SQL / Flask</span>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-right demo-arrow"></i>
+                                    </div>
+                                    <div class="demo-project-item" data-demo="api">
+                                        <div class="demo-info">
+                                            <span class="demo-name">node-auth-service-v3.zip</span>
+                                            <span class="demo-tags">Node.js / JWT / Express</span>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-right demo-arrow"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Scanner Specs Card -->
+                            <div class="glass-panel stats-card">
+                                <h3 class="card-section-title"><i class="fa-solid fa-microchip"></i> Static Code Analysis Engine</h3>
+                                <ul class="spec-list">
+                                    <li><i class="fa-solid fa-circle-check text-green"></i> <span>AST Parser (Abstract Syntax Tree)</span></li>
+                                    <li><i class="fa-solid fa-circle-check text-green"></i> <span>Control Flow Graph analysis</span></li>
+                                    <li><i class="fa-solid fa-circle-check text-green"></i> <span>Secret Leak Detection (Regex / Entropy)</span></li>
+                                    <li><i class="fa-solid fa-circle-check text-green"></i> <span>OWASP Top 10 vulnerabilities checker</span></li>
+                                    <li><i class="fa-solid fa-circle-check text-green"></i> <span>Software Composition Analysis (SCA)</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 2. SIMULATED SCAN VIEW -->
+                <section id="scanning-view" class="view-section">
+                    <div class="view-header centered">
+                        <h1 class="view-title scan-title">Scanning Source Code...</h1>
+                        <p class="view-description">Running code quality checkers, static analysis engine, and secrets search...</p>
+                    </div>
+
+                    <div class="scanning-layout">
+                        <!-- Top: Visual Scan Progress Card -->
+                        <div class="glass-panel scan-progress-card">
+                            <div class="scan-progress-circles">
+                                <div class="radial-progress">
+                                    <svg class="radial-svg" viewBox="0 0 120 120">
+                                        <circle class="radial-bg" cx="60" cy="60" r="50"></circle>
+                                        <circle class="radial-fill" cx="60" cy="60" r="50" id="radial-progress-circle"></circle>
+                                    </svg>
+                                    <div class="radial-text">
+                                        <span class="percentage" id="scan-percentage">0%</span>
+                                        <span class="sub" id="scanned-files-text">0 / 0 Files</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="scan-details-grid">
+                                <div class="scan-stat-box">
+                                    <span class="stat-title">Files Scanned</span>
+                                    <span class="stat-number" id="stats-scanned-files">0</span>
+                                </div>
+                                <div class="scan-stat-box">
+                                    <span class="stat-title">Total Lines Checked</span>
+                                    <span class="stat-number" id="stats-scanned-lines">0</span>
+                                </div>
+                                <div class="scan-stat-box">
+                                    <span class="stat-title">Vulnerabilities Found</span>
+                                    <span class="stat-number text-red" id="stats-vulnerabilities">0</span>
+                                </div>
+                                <div class="scan-stat-box">
+                                    <span class="stat-title">Estimated Remaining</span>
+                                    <span class="stat-number" id="stats-remaining-time">--s</span>
+                                </div>
+                            </div>
+
+                            <div class="scan-horizontal-bar">
+                                <div class="progress-bar-container large">
+                                    <div class="progress-bar-fill progress-glow" id="scan-linear-fill" style="width: 0%;"></div>
+                                </div>
+                                <div class="current-task-display" id="scan-current-task">Initializing Code Parser...</div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: Live Audit Terminal -->
+                        <div class="terminal-container glass-panel">
+                            <div class="terminal-header">
+                                <div class="terminal-buttons">
+                                    <span class="term-btn close"></span>
+                                    <span class="term-btn minimize"></span>
+                                    <span class="term-btn expand"></span>
+                                </div>
+                                <span class="terminal-title">SentryCode Auditor Terminal</span>
+                                <span class="terminal-speed">Speed: Fast</span>
+                            </div>
+                            <div class="terminal-body" id="terminal-logs">
+                                <!-- Appends logs dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 3. SCAN RESULTS VIEW -->
+                <section id="results-view" class="view-section">
+                    <div class="results-header">
+                        <div class="header-desc">
+                            <span class="results-badge-indicator" id="results-project-name">vuln-flask-ecommerce.zip</span>
+                            <h1 class="view-title">Audit Summary</h1>
+                            <p class="view-description">Scan completed. Review findings, analyze vulnerable AST patterns, and apply secure remediation patches.</p>
+                        </div>
+                        <div class="results-actions">
+                            <button class="btn-secondary" id="re-audit-btn">
+                                <i class="fa-solid fa-rotate-left"></i> Run New Scan
+                            </button>
+                            <button class="btn-primary" id="download-report-btn">
+                                <i class="fa-solid fa-file-pdf"></i> Export Audit Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Score Grid -->
+                    <div class="stats-summary-grid">
+                        <div class="stat-card glass-panel score-card">
+                            <div class="score-circular-wrapper">
+                                <div class="score-display">
+                                    <span class="score-number" id="summary-score-val">68</span>
+                                    <span class="score-total">/100</span>
+                                </div>
+                            </div>
+                            <div class="score-text-details">
+                                <span class="score-title">Security Score</span>
+                                <span class="score-status-desc warning" id="summary-score-desc">Moderate Risk Profile</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card glass-panel count-box-card border-high">
+                            <div class="stat-card-icon count-high-bg">
+                                <i class="fa-solid fa-circle-radiation"></i>
+                            </div>
+                            <div class="count-details">
+                                <span class="count-num" id="count-high-val">2</span>
+                                <span class="count-label">High Risk issues</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card glass-panel count-box-card border-medium">
+                            <div class="stat-card-icon count-medium-bg">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="count-details">
+                                <span class="count-num" id="count-med-val">2</span>
+                                <span class="count-label">Medium Risk issues</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card glass-panel count-box-card border-low">
+                            <div class="stat-card-icon count-low-bg">
+                                <i class="fa-solid fa-circle-info"></i>
+                            </div>
+                            <div class="count-details">
+                                <span class="count-num" id="count-low-val">0</span>
+                                <span class="count-label">Low Risk issues</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Results Content -->
+                    <div class="results-content-split">
+                        <!-- Left Panel: Issue Feed -->
+                        <div class="findings-feed-panel">
+                            <div class="feed-header">
+                                <h2 class="section-title">Findings Feed (<span id="total-findings-count">4</span>)</h2>
+                                <div class="feed-filters">
+                                    <button class="filter-chip active" data-filter="all">All</button>
+                                    <button class="filter-chip" data-filter="high">High</button>
+                                    <button class="filter-chip" data-filter="medium">Medium</button>
+                                    <button class="filter-chip" data-filter="low">Low</button>
+                                    <button class="filter-chip" data-filter="fixed">Fixed</button>
+                                </div>
+                            </div>
+
+                            <div class="findings-list" id="findings-list-container">
+                                <!-- Cards injected dynamically by app.js -->
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Live Remediation & Code Sandbox (Selected issue details) -->
+                        <div class="details-panel glass-panel empty-details" id="remediation-details-panel">
+                            <div class="empty-state-view" id="empty-state-view">
+                                <div class="empty-state-icon">
+                                    <i class="fa-solid fa-code"></i>
+                                </div>
+                                <h3>Select a Vulnerability</h3>
+                                <p>Click on any issue card in the findings feed to audit its source code, view the vulnerability graph, and apply remediation fixes.</p>
+                            </div>
+
+                            <div class="details-active-view" id="details-active-view" style="display: none;">
+                                <!-- Header metadata -->
+                                <div class="details-nav">
+                                    <span class="active-badge" id="details-risk-badge">HIGH</span>
+                                    <span class="details-category" id="details-category-text">OWASP A03:2021-Injection</span>
+                                </div>
+
+                                <div class="details-headline">
+                                    <h2 id="details-title">SQL Injection in auth.py</h2>
+                                    <div class="details-filepath" id="details-filepath">
+                                        <i class="fa-solid fa-file-code"></i> <span>src/auth/auth.py:L34</span>
+                                    </div>
+                                </div>
+
+                                <!-- Explanation -->
+                                <div class="details-desc-box">
+                                    <h3>Risk Description</h3>
+                                    <p id="details-description">Interpolating user input directly into SQL queries allows malicious users to manipulate the query structure...</p>
+                                </div>
+
+                                <!-- Code View Layout -->
+                                <div class="code-editor-layout">
+                                    <!-- Vulnerable block -->
+                                    <div class="code-box-wrapper vulnerable">
+                                        <div class="code-box-header">
+                                            <span><i class="fa-solid fa-triangle-exclamation text-red"></i> Vulnerable Code</span>
+                                            <span class="file-tag">Original</span>
+                                        </div>
+                                        <div class="code-body-pre">
+                                            <code id="details-vuln-code">
+                                                <!-- Populated dynamically -->
+                                            </code>
+                                        </div>
+                                    </div>
+
+                                    <!-- Secured block -->
+                                    <div class="code-box-wrapper secured">
+                                        <div class="code-box-header">
+                                            <span><i class="fa-solid fa-shield-halved text-green"></i> Secure Remediation Fix</span>
+                                            <span class="file-tag fixed">Patched</span>
+                                        </div>
+                                        <div class="code-body-pre">
+                                            <code id="details-fix-code">
+                                                <!-- Populated dynamically -->
+                                            </code>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Patch Action -->
+                                <div class="details-action-footer">
+                                    <div class="action-left">
+                                        <p class="impact-indicator">Estimated Remediation Impact: <strong class="text-green">+8 Security Score</strong></p>
+                                    </div>
+                                    <div class="action-right" id="action-right-btns">
+                                        <button class="btn-outline-action" id="ignore-issue-btn">Ignore</button>
+                                        <button class="btn-primary-action" id="apply-fix-btn">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i> Apply Remediation Fix
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. DOCS / RULES ENGINE VIEW -->
+                <section id="docs-view" class="view-section">
+                    <div class="view-header">
+                        <h1 class="view-title">Audit Engine Security Rules</h1>
+                        <p class="view-description">SentryCode references standard profiles including OWASP Top 10, CWE, and SANS Top 25.</p>
+                    </div>
+                    <div class="docs-grid">
+                        <div class="glass-panel docs-card">
+                            <span class="docs-tag tag-high">HIGH</span>
+                            <h3>SQL Injection (CWE-89)</h3>
+                            <p>Direct SQL interpolation bypasses parameterized parsing. Vulnerable structures allow attackers to modify queries arbitrarily to leak data or run admin processes.</p>
+                            <code>Rule ID: SC-PY-SQLI-002</code>
+                        </div>
+                        <div class="glass-panel docs-card">
+                            <span class="docs-tag tag-high">HIGH</span>
+                            <h3>Credentials Leak (CWE-798)</h3>
+                            <p>Hardcoded secrets (JWT secrets, DB credentials, API keys) in code repository files are leaked to anyone auditing history. Rotate and use secure config managers.</p>
+                            <code>Rule ID: SC-JS-SECRET-005</code>
+                        </div>
+                        <div class="glass-panel docs-card">
+                            <span class="docs-tag tag-med">MEDIUM</span>
+                            <h3>Insecure Deserialization (CWE-502)</h3>
+                            <p>Loading untrusted structures via binary deserializers like Python pickle or Java ObjectInputStream leads to instant remote code execution (RCE) via custom classes payload.</p>
+                            <code>Rule ID: SC-PY-PICKLE-001</code>
+                        </div>
+                        <div class="glass-panel docs-card">
+                            <span class="docs-tag tag-med">MEDIUM</span>
+                            <h3>Cross-Site Scripting XSS (CWE-79)</h3>
+                            <p>Rendering user inputs raw in the browser via unsafe interfaces (like innerHTML or raw JSX) lets attackers injection payloads executable in client sessions.</p>
+                            <code>Rule ID: SC-JS-XSS-009</code>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. SETTINGS VIEW -->
+                <section id="settings-view" class="view-section">
+                    <div class="view-header">
+                        <h1 class="view-title">Scanner Settings</h1>
+                        <p class="view-description">Configure detection profiles, API keys, and notification channels.</p>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="glass-panel settings-panel">
+                            <h2 class="panel-subtitle-large">Security Scanning Config</h2>
+                            <div class="setting-row">
+                                <div class="setting-desc">
+                                    <h3>AI Auto-Remediation Suggestions</h3>
+                                    <p>Use Gemini LLM models to draft patches for detected security leaks.</p>
+                                </div>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="toggle-ai" checked>
+                                    <label for="toggle-ai"></label>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-desc">
+                                    <h3>Entropy Secret Scan Threshold</h3>
+                                    <p>Sensitivity rate for flagging high entropy strings as passwords.</p>
+                                </div>
+                                <select class="settings-select">
+                                    <option>Standard (High precision)</option>
+                                    <option>Permissive (Catch all)</option>
+                                    <option>Strict (Zero false positives)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel settings-panel">
+                            <h2 class="panel-subtitle-large">Integrations & Hooks</h2>
+                            <div class="setting-row">
+                                <div class="setting-desc">
+                                    <h3>Git Hooks (Pre-Commit)</h3>
+                                    <p>Blocks git commits if a scan finds High severity failures.</p>
+                                </div>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="toggle-githooks">
+                                    <label for="toggle-githooks"></label>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-desc">
+                                    <h3>Webhook Web Alerting</h3>
+                                    <p>Triggers JSON payload POST alerts to specified audit logging pipelines.</p>
+                                </div>
+                                <input type="text" placeholder="https://api.mycorp.internal/hooks" class="form-input" style="max-width: 250px;">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Element -->
+    <div class="toast-container" id="toast-container">
+        <!-- Dynamically injected toasts -->
+    </div>
+
+    <!-- Modal for Mock PDF Export -->
+    <div class="modal-backdrop" id="report-modal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-file-pdf text-red"></i> PDF Report Generated</h2>
+                <button class="modal-close-btn" id="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>An executive summary and developer remediation report has been prepared for <strong><span id="modal-proj-name">vuln-flask-ecommerce.zip</span></strong>.</p>
+                <div class="report-meta-box">
+                    <div class="meta-row"><span>Date Generated:</span> <strong id="modal-date">June 17, 2026</strong></div>
+                    <div class="meta-row"><span>Security Score:</span> <strong id="modal-score">68/100</strong></div>
+                    <div class="meta-row"><span>Total Violations:</span> <strong id="modal-violations">4 issues</strong></div>
+                    <div class="meta-row"><span>Fixed Status:</span> <strong id="modal-fixed-stats" class="text-green">0/4 Resolved</strong></div>
+                </div>
+                <div class="modal-icon-display">
+                    <i class="fa-regular fa-file-pdf pdf-large-icon"></i>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="modal-cancel-btn">Close</button>
+                <button class="btn-primary" id="modal-download-btn"><i class="fa-solid fa-download"></i> Download PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
