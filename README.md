@@ -32,15 +32,5 @@ This repository contains the interactive frontend experience for simulating stat
 
 ---
 
-## 💻 Running 
 
-Here is the final live production URL hosted on Vercel: 👉 https://frontend-nine-rho-vrlpnl0iuk.vercel.app
-
-ℹ️ How It Works:
-Frontend (Vercel): Deployed to Vercel and points directly to the backend API/WebSocket address.
-Backend (Local + Tunnel): Running on your machine (port 5000) and exposed via a stable, persistent localtunnel subdomain:
-Backend URL: https://appshield-sanondika.loca.lt
----
-
-## 🔍 Pre-configured Audit Demos
 Click on either **`vuln-flask-ecommerce.zip`** (Flask/SQL Injection) or **`node-auth-service-v3.zip`** (Express/Secrets leak) in the sidebar setup panel to instantly execute a sample scan with dynamic scoring and custom terminal logging timelines.
