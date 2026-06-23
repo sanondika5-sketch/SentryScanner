@@ -32,27 +32,14 @@ This repository contains the interactive frontend experience for simulating stat
 
 ---
 
-## 💻 Running Locally
+## 💻 Running 
 
-Since the application runs entirely in the client-side browser, you can run it without any complex build steps.
+Here is the final live production URL hosted on Vercel: 👉 https://frontend-nine-rho-vrlpnl0iuk.vercel.app
 
-### Method 1: Python HTTP Server (Recommended)
-Run the local python server module in the repository root directory:
-```bash
-python -m http.server 8000
-```
-Open **`http://localhost:8000`** in your browser.
-
-### Method 2: Node Static Server
-Navigate to the directory and run:
-```bash
-npx serve .
-```
-Open **`http://localhost:3000`** in your browser.
-
-### Method 3: Direct File Execution
-Double-click `index.html` in your directory to run the application directly from the local file system.
-
+ℹ️ How It Works:
+Frontend (Vercel): Deployed to Vercel and points directly to the backend API/WebSocket address.
+Backend (Local + Tunnel): Running on your machine (port 5000) and exposed via a stable, persistent localtunnel subdomain:
+Backend URL: https://appshield-sanondika.loca.lt
 ---
 
 ## 🔍 Pre-configured Audit Demos
