@@ -108,11 +108,34 @@ let currentFilter = "all";
 let uploadedFiles = [];
 let scanInterval = null;
 
+// Mock Scan History Data
+let scanHistoryData = [
+    {
+        id: "hist-01",
+        projectName: "vuln-flask-ecommerce.zip",
+        date: new Date(Date.now() - 24 * 60 * 60 * 1000 * 2).toLocaleDateString() + " 10:24 AM", // 2 days ago
+        score: 86,
+        highCount: 1,
+        medCount: 1,
+        status: "Completed"
+    },
+    {
+        id: "hist-02",
+        projectName: "node-auth-service-v3.zip",
+        date: new Date(Date.now() - 60 * 60 * 1000 * 3).toLocaleDateString() + " 02:40 PM", // 3 hours ago
+        score: 82,
+        highCount: 1,
+        medCount: 1,
+        status: "Completed"
+    }
+];
+
 // --- DOM Elements ---
 const views = {
     dashboard: document.getElementById("upload-view"),
     scanning: document.getElementById("scanning-view"),
     results: document.getElementById("results-view"),
+    scanHistory: document.getElementById("scan-history-view"),
     docs: document.getElementById("docs-view"),
     settings: document.getElementById("settings-view")
 };
@@ -148,13 +171,18 @@ function setupNavigation() {
 
 function switchView(target) {
     // Hide all
-    Object.values(views).forEach(v => v.classList.remove("active"));
+    Object.values(views).forEach(v => {
+        if (v) v.classList.remove("active");
+    });
     
     if (target === "dashboard") {
         views.dashboard.classList.add("active");
     } else if (target === "all-issues") {
         views.results.classList.add("active");
         renderFindingsFeed();
+    } else if (target === "scan-history") {
+        views.scanHistory.classList.add("active");
+        renderScanHistory();
     } else if (target === "docs") {
         views.docs.classList.add("active");
     } else if (target === "settings") {
@@ -163,6 +191,79 @@ function switchView(target) {
         // Fallback
         views.dashboard.classList.add("active");
     }
+}
+
+function renderScanHistory() {
+    const rowsContainer = document.getElementById("scan-history-rows");
+    if (!rowsContainer) return;
+    
+    rowsContainer.innerHTML = "";
+    
+    if (scanHistoryData.length === 0) {
+        rowsContainer.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 24px; margin-bottom: 10px; display:block;"></i>
+                    No scans have been performed yet.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    scanHistoryData.forEach(item => {
+        const row = document.createElement("tr");
+        
+        const highBadge = item.highCount > 0 ? `<span class="history-badge count-high">${item.highCount} High</span>` : "";
+        const medBadge = item.medCount > 0 ? `<span class="history-badge count-medium">${item.medCount} Med</span>` : "";
+        const cleanBadge = (item.highCount === 0 && item.medCount === 0) ? `<span class="history-badge" style="background-color: var(--color-fixed-glow); color: var(--color-fixed);">Clean</span>` : "";
+        
+        const scoreColorClass = item.score >= 90 ? "text-green" : (item.score >= 80 ? "text-cyan" : "text-orange");
+
+        row.innerHTML = `
+            <td>
+                <div class="history-table-project">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>${item.projectName}</span>
+                </div>
+            </td>
+            <td>${item.date}</td>
+            <td>
+                <span class="history-score-display ${scoreColorClass}">${item.score}/100</span>
+            </td>
+            <td>
+                <div class="history-badge-list">
+                    ${highBadge}
+                    ${medBadge}
+                    ${cleanBadge}
+                </div>
+            </td>
+            <td>
+                <span class="status-text" style="font-weight: 600; color: ${item.score >= 90 ? 'var(--color-fixed)' : 'var(--text-secondary)'};">
+                    ${item.status}
+                </span>
+            </td>
+            <td>
+                <button class="history-btn-view" data-project="${item.projectName}">
+                    <i class="fa-solid fa-magnifying-glass"></i> View Audit
+                </button>
+            </td>
+        `;
+        
+        row.querySelector(".history-btn-view").addEventListener("click", () => {
+            currentProjectName = item.projectName;
+            findings = getFindingsForProject(currentProjectName);
+            showResultsScreen();
+            
+            // Highlight Vulnerabilities in sidebar
+            const navItems = document.querySelectorAll(".sidebar-nav .nav-item");
+            navItems.forEach(i => i.classList.remove("active"));
+            const vulnNav = Array.from(navItems).find(i => i.getAttribute("data-view") === "all-issues");
+            if (vulnNav) vulnNav.classList.add("active");
+        });
+
+        rowsContainer.appendChild(row);
+    });
 }
 
 // --- Upload View Controls ---
@@ -325,9 +426,33 @@ function setupScanEngine() {
     // Reset scanner variables
 }
 
+// Helper to get findings based on the selected demo or uploaded files
+function getFindingsForProject(projectName, files) {
+    if (projectName === "vuln-flask-ecommerce.zip") {
+        return JSON.parse(JSON.stringify(INITIAL_FINDINGS.filter(f => f.id === "vuln-01" || f.id === "vuln-03")));
+    }
+    if (projectName === "node-auth-service-v3.zip") {
+        return JSON.parse(JSON.stringify(INITIAL_FINDINGS.filter(f => f.id === "vuln-02" || f.id === "vuln-04")));
+    }
+    if (files && files.length > 0) {
+        const hasPy = files.some(f => f.name.endsWith(".py"));
+        const hasJs = files.some(f => f.name.endsWith(".js") || f.name === "package.json");
+        
+        let filtered = [];
+        if (hasPy) {
+            filtered = filtered.concat(INITIAL_FINDINGS.filter(f => f.id === "vuln-01" || f.id === "vuln-03"));
+        }
+        if (hasJs) {
+            filtered = filtered.concat(INITIAL_FINDINGS.filter(f => f.id === "vuln-02" || f.id === "vuln-04"));
+        }
+        return JSON.parse(JSON.stringify(filtered));
+    }
+    return JSON.parse(JSON.stringify(INITIAL_FINDINGS));
+}
+
 function triggerScanProcess() {
-    // Reset Active Findings State
-    findings = JSON.parse(JSON.stringify(INITIAL_FINDINGS));
+    // Reset Active Findings State dynamically based on project
+    findings = getFindingsForProject(currentProjectName, uploadedFiles);
     activeFindingId = null;
     
     // Hide upload view, show scanning view
@@ -352,30 +477,56 @@ function triggerScanProcess() {
     
     // Variables
     let progress = 0;
-    const maxFiles = 18;
-    const maxLines = 14302;
+    const maxFiles = uploadedFiles.length > 0 ? uploadedFiles.length : 18;
+    const maxLines = uploadedFiles.length > 0 ? uploadedFiles.reduce((sum, f) => sum + (f.size ? Math.round(f.size / 30) : 100), 0) : 14302;
     let vulnsFound = 0;
     
-    const logTimeline = [
-        { progress: 0, text: "[INFO] Initializing SentryCode Static Analysis Core v2.4.1", type: "info" },
-        { progress: 4, text: "[INFO] Parsing project structure tree...", type: "info" },
-        { progress: 8, text: `[INFO] Loaded target source files from: ${currentProjectName}`, type: "success" },
-        { progress: 12, text: "[PARSE] Generating AST (Abstract Syntax Tree) models...", type: "info" },
-        { progress: 18, text: "[AUDIT] Checking rules profile: OWASP Top 10 + Secrets Scan", type: "info" },
-        { progress: 24, text: "[SCAN] Running code analyzer on: src/auth/auth.py...", type: "info" },
-        { progress: 28, text: "[VULN ALERT] High vulnerability found in src/auth/auth.py:L34\n       >> SQL Injection in database execution query. User input directly formatted.", type: "danger", vulnFlag: true },
-        { progress: 38, text: "[SCAN] Running credentials checker on: src/config/config.js...", type: "info" },
-        { progress: 44, text: "[VULN ALERT] High vulnerability found in src/config/config.js:L3\n       >> Plaintext secret key leak. JWT secret token hardcoded in variable definition.", type: "danger", vulnFlag: true },
-        { progress: 54, text: "[SCAN] Scanning semantic data structures on: src/utils/data_parser.py...", type: "info" },
-        { progress: 58, text: "[VULN ALERT] Medium vulnerability found in src/utils/data_parser.py:L5\n       >> Insecure deserialization. Dangerous pickle loads invoke execution payload.", type: "warning", vulnFlag: true },
-        { progress: 68, text: "[SCAN] Auditing client DOM interfaces on: src/chat/chat.js...", type: "info" },
-        { progress: 72, text: "[VULN ALERT] Medium vulnerability found in src/chat/chat.js:L5\n       >> Cross-Site Scripting (XSS). Direct raw injection to HTML innerHTML node.", type: "warning", vulnFlag: true },
-        { progress: 80, text: "[SCA] Analyzing software package dependency trees (package.json / requirements.txt)...", type: "info" },
-        { progress: 86, text: "[SCA] 0 known public CVE dependency vulnerabilities found.", type: "success" },
-        { progress: 92, text: "[REPORT] Processing security score computation...", type: "info" },
-        { progress: 96, text: "[REPORT] Finalizing audit results data model...", type: "info" },
-        { progress: 100, text: "[SUCCESS] Audit completed. 4 potential risk areas identified.", type: "success" }
-    ];
+    // Build dynamic timeline logs matching active findings
+    const logTimeline = [];
+    logTimeline.push({ progress: 0, text: "[INFO] Initializing SentryCode Static Analysis Core v2.4.1", type: "info" });
+    logTimeline.push({ progress: 4, text: "[INFO] Parsing project structure tree...", type: "info" });
+    logTimeline.push({ progress: 8, text: `[INFO] Loaded target source files from: ${currentProjectName}`, type: "success" });
+    logTimeline.push({ progress: 12, text: "[PARSE] Generating AST (Abstract Syntax Tree) models...", type: "info" });
+    logTimeline.push({ progress: 18, text: "[AUDIT] Checking rules profile: OWASP Top 10 + Secrets Scan", type: "info" });
+
+    const hasVuln1 = findings.some(f => f.id === "vuln-01");
+    const hasVuln2 = findings.some(f => f.id === "vuln-02");
+    const hasVuln3 = findings.some(f => f.id === "vuln-03");
+    const hasVuln4 = findings.some(f => f.id === "vuln-04");
+
+    if (hasVuln1) {
+        logTimeline.push({ progress: 24, text: "[SCAN] Running code analyzer on: src/auth/auth.py...", type: "info" });
+        logTimeline.push({ progress: 28, text: "[VULN ALERT] High vulnerability found in src/auth/auth.py:L34\n       >> SQL Injection in database execution query. User input directly formatted.", type: "danger", vulnFlag: true });
+    } else {
+        logTimeline.push({ progress: 26, text: "[SCAN] Running code analyzer on: src/auth/auth.py... Clean.", type: "success" });
+    }
+
+    if (hasVuln2) {
+        logTimeline.push({ progress: 38, text: "[SCAN] Running credentials checker on: src/config/config.js...", type: "info" });
+        logTimeline.push({ progress: 44, text: "[VULN ALERT] High vulnerability found in src/config/config.js:L3\n       >> Plaintext secret key leak. JWT secret token hardcoded in variable definition.", type: "danger", vulnFlag: true });
+    } else {
+        logTimeline.push({ progress: 40, text: "[SCAN] Running credentials checker on: src/config/config.js... Clean.", type: "success" });
+    }
+
+    if (hasVuln3) {
+        logTimeline.push({ progress: 54, text: "[SCAN] Scanning semantic data structures on: src/utils/data_parser.py...", type: "info" });
+        logTimeline.push({ progress: 58, text: "[VULN ALERT] Medium vulnerability found in src/utils/data_parser.py:L5\n       >> Insecure deserialization. Dangerous pickle loads invoke execution payload.", type: "warning", vulnFlag: true });
+    } else {
+        logTimeline.push({ progress: 56, text: "[SCAN] Scanning semantic data structures on: src/utils/data_parser.py... Clean.", type: "success" });
+    }
+
+    if (hasVuln4) {
+        logTimeline.push({ progress: 68, text: "[SCAN] Auditing client DOM interfaces on: src/chat/chat.js...", type: "info" });
+        logTimeline.push({ progress: 72, text: "[VULN ALERT] Medium vulnerability found in src/chat/chat.js:L5\n       >> Cross-Site Scripting (XSS). Direct raw injection to HTML innerHTML node.", type: "warning", vulnFlag: true });
+    } else {
+        logTimeline.push({ progress: 70, text: "[SCAN] Auditing client DOM interfaces on: src/chat/chat.js... Clean.", type: "success" });
+    }
+
+    logTimeline.push({ progress: 80, text: "[SCA] Analyzing software package dependency trees (package.json / requirements.txt)...", type: "info" });
+    logTimeline.push({ progress: 86, text: "[SCA] 0 known public CVE dependency vulnerabilities found.", type: "success" });
+    logTimeline.push({ progress: 92, text: "[REPORT] Processing security score computation...", type: "info" });
+    logTimeline.push({ progress: 96, text: "[REPORT] Finalizing audit results data model...", type: "info" });
+    logTimeline.push({ progress: 100, text: `[SUCCESS] Audit completed. ${findings.length} potential risk areas identified.`, type: "success" });
 
     // Radial circle dash offset helper (radius=50)
     // 2 * PI * r = 314.15
@@ -493,7 +644,39 @@ function setupResultsControls() {
 }
 
 function showResultsScreen() {
+    // Add current scan to history
+    let totalDeduction = 0;
+    findings.forEach(f => {
+        if (!f.isFixed) totalDeduction += f.points;
+    });
+    const scoreVal = Math.max(100 - totalDeduction, 0);
+    const highCount = findings.filter(f => f.risk === "high" && !f.isFixed).length;
+    const medCount = findings.filter(f => f.risk === "medium" && !f.isFixed).length;
+
+    const dateStr = new Date().toLocaleDateString();
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Prepend new history record (avoid adding if it was already selected from history page)
+    const exists = scanHistoryData.some(h => h.projectName === currentProjectName && h.date.startsWith(dateStr));
+    if (!exists) {
+        scanHistoryData.unshift({
+            id: "hist-" + Date.now(),
+            projectName: currentProjectName,
+            date: `${dateStr} ${timeStr}`,
+            score: scoreVal,
+            highCount: highCount,
+            medCount: medCount,
+            status: "Completed"
+        });
+    }
+
     switchView("all-issues");
+    
+    // Highlight Vulnerabilities in sidebar navigation
+    const navItems = document.querySelectorAll(".sidebar-nav .nav-item");
+    navItems.forEach(i => i.classList.remove("active"));
+    const vulnNav = Array.from(navItems).find(i => i.getAttribute("data-view") === "all-issues");
+    if (vulnNav) vulnNav.classList.add("active");
     
     // Configure project header labels
     document.getElementById("results-project-name").textContent = currentProjectName;
@@ -668,14 +851,15 @@ function applyVulnerabilityFix(id) {
 }
 
 function updateScoreStats() {
-    // Score logic: baseline 68/100. Each fixed vulnerability adds its point value.
-    let baseScore = 68;
-    const resolved = findings.filter(f => f.isFixed);
-    resolved.forEach(f => {
-        baseScore += f.points;
+    // Score logic: baseline starts at 100. Each active (unfixed) vulnerability deducts its point value.
+    let totalDeduction = 0;
+    findings.forEach(f => {
+        if (!f.isFixed) {
+            totalDeduction += f.points;
+        }
     });
 
-    const finalScore = Math.min(baseScore, 100);
+    const finalScore = Math.max(100 - totalDeduction, 0);
 
     // Update Sidebar Score
     document.getElementById("widget-score-val").textContent = `${finalScore}/100`;
@@ -735,6 +919,14 @@ function updateScoreStats() {
     if (countHighDisplay) countHighDisplay.textContent = highIssues;
     if (countMedDisplay) countMedDisplay.textContent = medIssues;
     if (countLowDisplay) countLowDisplay.textContent = lowIssues;
+
+    // Update active history record score and counts in real-time
+    const record = scanHistoryData.find(h => h.projectName === currentProjectName);
+    if (record) {
+        record.score = finalScore;
+        record.highCount = highIssues;
+        record.medCount = medIssues;
+    }
 }
 
 // --- Global helper utilities ---
@@ -835,7 +1027,110 @@ function setupGlobalControls() {
     modalCancel.addEventListener("click", closeModalFunc);
 
     modalDownload.addEventListener("click", () => {
-        showToast("<i class=\"fa-solid fa-circle-down\"></i> Downloading PDF audit bundle...", "success");
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Set background header band (dark indigo/slate)
+            doc.setFillColor(8, 9, 12);
+            doc.rect(0, 0, 210, 45, "F");
+
+            // Header text
+            doc.setTextColor(255, 255, 255);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.text("SENTRYCODE // SECURITY AUDIT REPORT", 15, 20);
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(148, 163, 184); // Slate text
+            doc.text("AI-Powered Static Code Analysis Summary & Remediation Logs", 15, 27);
+
+            // Divider line
+            doc.setDrawColor(34, 41, 54);
+            doc.setLineWidth(1);
+            doc.line(0, 45, 210, 45);
+
+            // Meta Info Section
+            doc.setTextColor(15, 23, 42); // Slate-900
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("Audit Metadata", 15, 60);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(`Project Name: ${currentProjectName}`, 15, 70);
+            doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 15, 76);
+
+            // Calculations for score
+            let totalDeduction = 0;
+            findings.forEach(f => {
+                if (!f.isFixed) {
+                    totalDeduction += f.points;
+                }
+            });
+            const scoreVal = Math.max(100 - totalDeduction, 0);
+            doc.text(`Final Security Score: ${scoreVal}/100`, 15, 82);
+            
+            const resolvedCount = findings.filter(f => f.isFixed).length;
+            doc.text(`Vulnerabilities Resolved: ${resolvedCount} of ${findings.length}`, 15, 88);
+
+            // Score status
+            doc.setFont("helvetica", "bold");
+            let scoreDesc = "Moderate Risk Profile";
+            if (scoreVal >= 90) scoreDesc = "Excellent Risk Profile";
+            else if (scoreVal >= 80) scoreDesc = "Optimized Risk Profile";
+            doc.text(`Security Profile Status: ${scoreDesc}`, 15, 96);
+
+            // Divider
+            doc.setDrawColor(203, 213, 225);
+            doc.line(15, 102, 195, 102);
+
+            // Audit Findings List
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("Detailed Findings & Audit Logs", 15, 112);
+
+            let yPos = 122;
+            findings.forEach((finding, idx) => {
+                if (yPos > 240) {
+                    doc.addPage();
+                    yPos = 25;
+                }
+
+                // Severity Badge Background
+                const severity = finding.risk.toUpperCase();
+                const isFixed = finding.isFixed;
+                const statusStr = isFixed ? "RESOLVED (Patched)" : "UNRESOLVED (Active)";
+
+                doc.setFillColor(241, 245, 249);
+                doc.rect(15, yPos - 5, 180, 28, "F");
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.setTextColor(isFixed ? 16 : (finding.risk === "high" ? 239 : 249), isFixed ? 185 : (finding.risk === "high" ? 68 : 115), isFixed ? 129 : (finding.risk === "high" ? 68 : 22)); // green or red or orange
+                doc.text(`[${statusStr}] ${finding.title}`, 20, yPos + 2);
+
+                doc.setTextColor(100, 116, 139); // Muted slate
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.text(`File: ${finding.filepath}  |  Rule: ${finding.ruleId}  |  Impact: +${finding.points} pts`, 20, yPos + 8);
+
+                // Word wrap description
+                doc.setTextColor(51, 65, 85); // Slate 700
+                const splitDesc = doc.splitTextToSize(finding.description, 170);
+                doc.text(splitDesc, 20, yPos + 14);
+
+                yPos += 35;
+            });
+
+            // Save PDF
+            const cleanProjectName = currentProjectName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            doc.save(`sentrycode_audit_${cleanProjectName}.pdf`);
+            showToast("<i class=\"fa-solid fa-circle-down\"></i> PDF audit report downloaded successfully!", "success");
+        } catch (err) {
+            console.error(err);
+            showToast("<i class=\"fa-solid fa-circle-xmark\"></i> Failed to generate PDF. Check console logs.", "danger");
+        }
         closeModalFunc();
     });
 
