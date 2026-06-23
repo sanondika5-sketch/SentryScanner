@@ -2,6 +2,8 @@
 
 SentryCode is a high-fidelity, interactive developer dashboard designed to audit source code repositories for vulnerabilities, secret leaks, and OWASP Top 10 violations. 
 
+### 🌐 Live Demo: [https://sanondika5-sketch.github.io/VulnerabilityScanner/](https://sanondika5-sketch.github.io/VulnerabilityScanner/)
+
 This repository contains the interactive frontend experience for simulating static analysis sweeps, analyzing vulnerable code syntax trees, applying simulated AI auto-remediation fixes in real-time, and reviewing local scan logs.
 
 ---
